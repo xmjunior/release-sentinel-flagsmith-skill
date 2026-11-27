@@ -1,0 +1,22 @@
+{
+  "files": {
+    ".gitattributes": "236ff4b3d7ef7bebc9bcd7b958dd79b94f5fb9ce123bff104ff1eecffc392b63",
+    ".gitignore": "44ff45712420c26fdcbc8aeb0a3a18b81c7b4db09758c81915cf2474489bfd50",
+    "README.md": "a1d514881eeee67bb7ae37d4e9ab5a2ec2dfcb61ee487414016a16ad5de0a1eb",
+    "docs/DEMO_VIDEO_SHOTLIST.md": "7a30fcb911bfc032d0ceec0a35f7167599236e4e1d8bd42f26f2f2f77a2637de",
+    "docs/E2E_EVIDENCE.md": "065191e15b25ba0b05fb19b5aa01765c6480c8f9cd9ee8b01dcd13eb17f47907",
+    "docs/LICENSING_NOTE.md": "f69c461ca743b6aecfba148d3c3123d6d85087d4f5761bc924dd2e98b58ae5d1",
+    "docs/RELEASE_SENTINEL_DEMO.mp4": "56dc933992447d957aee9d40f77e66fdb5851368dc765b4e81eedb381e90b309",
+    "docs/SUBMISSION_TEXT_EN.md": "521e6d218aacaacbc0fa2a4520b7590c232405f10caeeeac5eb4412cc3d19093",
+    "skills/release-sentinel/.gitignore": "fd8a493bf9e7137d6be4d0110729ca50fa44ab3c33aed8b9b7b55fd858036b2b",
+    "skills/release-sentinel/README.md": "8724d8a1d5d689dd1ae89fbed6775f81d76bd5025f7588e51a65225c814b7cdb",
+    "skills/release-sentinel/SKILL.md": "567448babe79d4a451053442ccf03ff3d2b01212751ce27402a6a1045494703e",
+    "skills/release-sentinel/scripts/sentinel.py": "8a5fe711bdf8d07ad5512ff136431e981b917a4dcfe1ccbe9ab021b89eb33a0e",
+    "skills/release-sentinel/tests/test_audit_regressions.py": "205b33771d742b641d8ece1308f13e07232388052b6912a406309eff77f0f33a",
+    "skills/release-sentinel/tests/test_sentinel.py": "e562104d468778c45ece894bbc71e446259be537e48fc0e9d93e62647c8e3d65",
+    "skills/release-sentinel/tests/test_spanish_sandbox.py": "ee754b9e833ab6993dbc450fd1d60e3af7374e6b82b377aec1454df4d506826f"
+  },
+  "package": "Release Sentinel Track 04 public repo candidate",
+  "source_script_git_blob_sha": "ee830f0a1ede53c8fb39f7ffdce7c3aa7d763abc",
+  "tests": "36/36 local simulated PASS; operator-supplied test-only OFF-ON-OFF evidence; edited recap video included"
+}

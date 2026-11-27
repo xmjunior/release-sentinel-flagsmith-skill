@@ -1,0 +1,3 @@
+.sentinel/
+__pycache__/
+*.pyc
