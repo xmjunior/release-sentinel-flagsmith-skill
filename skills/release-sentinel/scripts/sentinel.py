@@ -16,6 +16,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = SKILL_ROOT.parents[1]
@@ -39,11 +40,12 @@ def stamp() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def run_command(argv: list[str], *, timeout: int = 30, cwd: Path | None = None) -> str:
-    """No shell; no command output is copied into error logs."""
+def run_command(argv: list[str], *, timeout: int = 30, cwd: Path | None = None,
+                env: dict[str, str] | None = None) -> str:
+    """No shell; no command output, private environment or SDK key is logged."""
     try:
-        r = subprocess.run(argv, cwd=cwd, text=True, capture_output=True, timeout=timeout,
-                           check=False)
+        r = subprocess.run(argv, cwd=cwd, env=env, text=True, capture_output=True,
+                           timeout=timeout, check=False)
     except subprocess.TimeoutExpired as exc:
         raise Blocked('Command timed out; effect may be unknown') from None
     except (OSError, ValueError) as exc:
@@ -57,11 +59,28 @@ def cli(args: list[str]) -> str:
     executable = shutil.which('flagsmith')
     if not executable:
         raise Blocked('Flagsmith CLI v2 not found; install it locally in the sandbox operator environment')
-    # On Windows Python may delegate npm .cmd to cmd.exe even with shell=False.
-    # All arguments supplied to the .cmd are fixed/sanitised; SDK key is only in env.
-    # Pin the official management API: an inherited FLAGSMITH_API_URL must not
-    # silently redirect authenticated reads or writes to an arbitrary host.
-    return run_command([executable, '--api-url', 'https://api.flagsmith.com', *args], timeout=35)
+    # CLI v2's --environment parameter is the SDK KEY, not an environment name.
+    # Putting the key on argv exposes it to process listings and diagnostic tools.
+    # Instead, preserve the human-supplied FLAGSMITH_ENVIRONMENT in the subprocess
+    # environment and prevent a local flagsmith.json / inherited config-path from
+    # silently selecting a different SDK environment for flag get/enable/disable.
+    # The operator's active CLI Admin login/keychain remains available as before.
+    safe_env = os.environ.copy()
+    for name in list(safe_env):
+        upper = name.upper()
+        if upper.startswith('FLAGSMITH_') and upper not in {'FLAGSMITH_ENVIRONMENT', 'FLAGSMITH_API_KEY'}:
+            safe_env.pop(name, None)
+    # The current project and organisation are supplied as explicit CLI options.
+    # Pin the official management API independent of inherited variables.
+    try:
+        with tempfile.TemporaryDirectory(prefix='release-sentinel-cli-',
+                                         ignore_cleanup_errors=True) as empty_dir:
+            return run_command(
+                [executable, '--api-url', 'https://api.flagsmith.com', *args],
+                timeout=35, cwd=Path(empty_dir), env=safe_env,
+            )
+    except OSError:
+        raise Blocked('Unable to prepare isolated temporary directory for Flagsmith CLI') from None
 
 
 def cli_json(args: list[str]) -> dict:
@@ -75,10 +94,10 @@ def cli_json(args: list[str]) -> dict:
     return data
 
 
-def check_identifier(value: str, label: str) -> str:
-    if not SAFE.fullmatch(value):
+def check_identifier(value: str, label: str, *, deny_production: bool = True) -> str:
+    if not isinstance(value, str) or not SAFE.fullmatch(value):
         raise Blocked(f'Invalid {label} name')
-    if DENIED_NAMES.search(value):
+    if deny_production and DENIED_NAMES.search(value):
         raise Blocked(f'Production-like {label} name forbidden')
     return value
 
@@ -120,7 +139,13 @@ def preflight(args: argparse.Namespace) -> tuple[dict, str]:
         raise Blocked('FLAGSMITH_ENVIRONMENT SDK key must be set privately in the operator terminal')
     # Do not print or log CLI responses: auth status can contain identity details.
     version = cli(['--version'])
-    if not re.search(r'(?i)(^|\W)v?2\.[0-9]+', version):
+    # Compare the CLI's own version, never a nested "2.0" in 1.2.3 or node-v22.2.0.
+    parsed = re.fullmatch(
+        r'flagsmith(?:[ \t]+version)?[ \t]+v?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)'
+        r'(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?',
+        version.strip(), re.IGNORECASE,
+    )
+    if not parsed or parsed.group('major') != '2':
         raise Blocked('Flagsmith CLI v2 is required')
     status = cli_json(['auth', 'status'])
     if not status.get('credentialSource'):
@@ -207,8 +232,18 @@ def run_tests() -> int:
                f"print({marker!r}+json.dumps({{'testsRun': result.testsRun, 'ok': result.wasSuccessful()}}))\n"
                "sys.exit(0 if result.wasSuccessful() and result.testsRun>0 else 2)\n")
     command = [sys.executable, '-B', '-c', harness, str(SKILL_ROOT / 'tests')]
+    # Regression source is trusted at the approved Git revision, but must not
+    # inherit cloud/API secrets while running inside the privileged operator TTY.
+    tests_env = os.environ.copy()
+    for name in list(tests_env):
+        upper = name.upper()
+        if (upper.startswith('FLAGSMITH_')
+                or upper in {'GH_TOKEN', 'GITHUB_TOKEN'}
+                or upper.endswith(('_API_KEY', '_TOKEN', '_SECRET', '_SECRET_KEY',
+                                   '_CLIENT_SECRET', '_PRIVATE_KEY', '_PASSWORD'))):
+            tests_env.pop(name, None)
     try:
-        proc = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True,
+        proc = subprocess.run(command, cwd=REPO_ROOT, env=tests_env, text=True, capture_output=True,
                               timeout=70, check=False)
     except (OSError, subprocess.TimeoutExpired):
         raise Blocked('Trusted test runner failed or timed out') from None
@@ -288,11 +323,18 @@ def load_plan(args: argparse.Namespace, context: dict, version: str) -> dict:
 
 
 def use_once(plan: dict) -> None:
+    plan_path = STATE / 'plan.json'
+    try:
+        current = json.loads(plan_path.read_text(encoding='utf-8'))
+    except (OSError, ValueError, TypeError):
+        raise Blocked('Operator plan is no longer active') from None
+    if not isinstance(current, dict) or current.get('nonce') != plan['nonce']:
+        raise Blocked('Operator plan was superseded by another plan')
     used = STATE / ('used-' + plan['nonce'])
     try:
         fd = os.open(used, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         os.close(fd)
-        (STATE / 'plan.json').unlink()
+        plan_path.unlink()
     except (FileExistsError, FileNotFoundError):
         raise Blocked('Approval nonce has already been consumed') from None
 
@@ -312,7 +354,7 @@ def emergency_disable(args: argparse.Namespace, context: dict, reason: str) -> b
     try:
         change(args, enable=False)
         verify_state(args, enabled=False)
-    except Exception:
+    except (Exception, KeyboardInterrupt):
         evidence('EMERGENCY_ROLLBACK_UNVERIFIED', flag=args.flag, project=context['project_id'], reason=reason)
         return False
     evidence('EMERGENCY_ROLLBACK_VERIFIED', flag=args.flag, project=context['project_id'], reason=reason)
@@ -334,7 +376,9 @@ def main(argv=None) -> int:
         if args.action != 'enroll' and not args.flag:
             raise Blocked('--flag is required for this action')
         if args.flag:
-            check_identifier(args.flag, 'flag')
+            # A name like product_search/live_chat is a VALID flag in a test sandbox.
+            # Production ban applies to *project and environment*, never flag text.
+            check_identifier(args.flag, 'flag', deny_production=False)
         context, version = preflight(args)
         if args.action == 'enroll':
             challenge = (f'ENROLL {operator_scope(context)}SANDBOX P{args.project}/E{context["environment_id"]}'
@@ -366,8 +410,11 @@ def main(argv=None) -> int:
             human_confirm(challenge)
             # Approval may take longer than ten minutes; no stale approval is valid.
             plan_still_valid(plan)
+            load_policy(context)
             if git_state(require_clean=True) != plan['git_sha']:
                 raise Blocked('Git HEAD changed during human approval')
+            if get_state(args) is not False:
+                raise Blocked('Flag state changed during human approval')
             use_once(plan)
             evidence('ENABLE_ATTEMPT', flag=args.flag, project=args.project, nonce=plan['nonce'])
             try:
@@ -394,6 +441,7 @@ def main(argv=None) -> int:
                          f'/{args.flag} SHA{rev[:12]} KEY{context["environment_key_sha256"][:12]}'
                          f' NONCE{nonce}')
             human_confirm(challenge)
+            load_policy(context)
             evidence('ROLLBACK_ATTEMPT', flag=args.flag, project=args.project, nonce=nonce)
             change(args, enable=False)
             verify_state(args, enabled=False)
