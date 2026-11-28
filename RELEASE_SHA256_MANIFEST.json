@@ -1,0 +1,26 @@
+{
+  "files": {
+    ".gitattributes": "882696f82da551c8a12a29f7fb58bf6476170728a7e97d0fdb550de3a8fd79b8",
+    ".gitignore": "a0b1770faaa95d8d70890ccb76aa8374e336ec05502b59fef6477910ca87d4d9",
+    "docs/DEMO_VIDEO_SHOTLIST.md": "7a30fcb911bfc032d0ceec0a35f7167599236e4e1d8bd42f26f2f2f77a2637de",
+    "docs/E2E_EVIDENCE.md": "829a5b43a5b0cf573e8a2a369210828a06dd90c890985e7efa09f0bf330572af",
+    "docs/LICENSING_NOTE.md": "fa0ccb5365dac207ef32859f6f646441b786694957ec00c9b3a1d636ed821956",
+    "docs/RELEASE_SENTINEL_DEMO.mp4": "56dc933992447d957aee9d40f77e66fdb5851368dc765b4e81eedb381e90b309",
+    "docs/SUBMISSION_TEXT_EN.md": "da38c623e0ea56a9c1eccd608c9fb6ddd113aca139ab71144edab55f0584d5c8",
+    "LICENSE": "b64fc7fb3acdb9db8de61ab70d4bfc9e1da3e303f615ec16ebad9cfeedf0c767",
+    "README.md": "6095cdafab9360fed7775c86baaad8be1267ed2bf1906698d29f1d6c009fb66d",
+    "skills/release-sentinel/.gitignore": "0b393e65e7528cc458f5a801e4b8fb706a14f71e9669b6a01c047bc5a8d413ab",
+    "skills/release-sentinel/README.md": "91454a6145c32b3c5979fa238fd2b21f3fb7bc61f6fe0e88f8b65b9add4edd9b",
+    "skills/release-sentinel/scripts/sentinel.py": "dcd79542df46f30a5e6fa5a7a5ed7b0a59075368b7a9fda88f00cd1b1d91ef0e",
+    "skills/release-sentinel/SKILL.md": "052ecab8221ca805dcd44f81bfc138573a03d34da3172cfff5e4801e6149d543",
+    "skills/release-sentinel/tests/test_audit_regressions.py": "205b33771d742b641d8ece1308f13e07232388052b6912a406309eff77f0f33a",
+    "skills/release-sentinel/tests/test_coderabbit_regressions.py": "eff49fb7df261c92ece803546d287554cb28c52808037dc609981272a8125e96",
+    "skills/release-sentinel/tests/test_omega_regressions.py": "faf8b5306e40e64ea793abde23e1791b5ea46dfa45a2a8dbe397bfa41a9f29f9",
+    "skills/release-sentinel/tests/test_sentinel.py": "e562104d468778c45ece894bbc71e446259be537e48fc0e9d93e62647c8e3d65",
+    "skills/release-sentinel/tests/test_spanish_sandbox.py": "ee754b9e833ab6993dbc450fd1d60e3af7374e6b82b377aec1454df4d506826f"
+  },
+  "package": "Release Sentinel Track 04 public repo candidate",
+  "validated_source_commit_sha": "f993328353f580608d1fd77598cb820f4c7bd5e5",
+  "source_script_git_blob_sha": "4cc461c341da85f9f8e2f05b091fcc1a366f1c63",
+  "tests": "55/55 local simulated PASS; 28 Nov 2026 verified real Flagsmith Cloud CLI v2.0.0 OFF-ON-OFF E2E; MIT licensed; edited recap video included"
+}

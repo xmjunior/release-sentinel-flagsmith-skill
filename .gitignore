@@ -1,0 +1,16 @@
+# Secret data, flagsmith CLI login, local approval and test runtime artefacts
+.release-sentinel/
+.sentinel/
+*.env
+.env
+.env.*
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+local_runs/
+*_REPORT*.json
+*SECRET*.json
+*.log
+*.bak
+.DS_Store
